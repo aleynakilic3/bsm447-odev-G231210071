@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,34 +11,36 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { kisiKayitliMi, kisiKaydetVeyaCikar } from '../utils/storage';
 
 export default function DetayScreen({ route }) {
-  // Ödev şartı: Kayıt navigasyon parametresiyle alınır
   const { kisi } = route.params;
-
-  // 5. adımda AsyncStorage ile kalıcı hale getirilecek geçici durum
   const [kaydedildi, setKaydedildi] = useState(false);
+
+  // Ekran açıldığında kişinin AsyncStorage'da kayıtlı olup olmadığını kontrol et
+  useEffect(() => {
+    const durumKontrol = async () => {
+      const durum = await kisiKayitliMi(kisi.login.uuid);
+      setKaydedildi(durum);
+    };
+    durumKontrol();
+  }, [kisi.login.uuid]);
 
   const tamAd = `${kisi.name.first} ${kisi.name.last}`;
   const tamAdres = `${kisi.location.street.name} No: ${kisi.location.street.number}, ${kisi.location.city} / ${kisi.location.state}, ${kisi.location.country}`;
 
-  // Konuya özel beklenti: Telefonla arama
   const aramaYap = () => {
-    const telUrl = `tel:${kisi.phone}`;
-    Linking.openURL(telUrl).catch(() =>
+    Linking.openURL(`tel:${kisi.phone}`).catch(() =>
       Alert.alert('Hata', 'Arama uygulaması açılamadı.')
     );
   };
 
-  // Konuya özel beklenti: E-posta gönderme
   const epostaGonder = () => {
-    const mailUrl = `mailto:${kisi.email}`;
-    Linking.openURL(mailUrl).catch(() =>
+    Linking.openURL(`mailto:${kisi.email}`).catch(() =>
       Alert.alert('Hata', 'E-posta uygulaması açılamadı.')
     );
   };
 
-  // Ek Kural 9: Paylaş düğmesi
   const kisiyiPaylas = async () => {
     try {
       const ozetMetin =
@@ -57,8 +59,9 @@ export default function DetayScreen({ route }) {
     }
   };
 
-  const kaydetDurumuDegistir = () => {
-    setKaydedildi(!kaydedildi);
+  const kaydetDurumuDegistir = async () => {
+    const yeniDurum = await kisiKaydetVeyaCikar(kisi);
+    setKaydedildi(yeniDurum);
   };
 
   return (
@@ -73,7 +76,7 @@ export default function DetayScreen({ route }) {
         <Text style={styles.yasBilgisi}>{kisi.dob.age} yaşında</Text>
       </View>
 
-      {/* İletişim ve Konum Bilgileri[cite: 15] */}
+      {/* İletişim ve Konum Bilgileri */}
       <View style={styles.bilgiKarti}>
         <View style={styles.bilgiSatiri}>
           <Text style={styles.etiket}>E-posta</Text>
@@ -96,7 +99,7 @@ export default function DetayScreen({ route }) {
         </View>
       </View>
 
-      {/* Hızlı İşlem Düğmeleri: Ara, E-posta Gönder, Paylaş[cite: 2, 15] */}
+      {/* Hızlı İşlem Düğmeleri: Ara, E-posta Gönder, Paylaş */}
       <View style={styles.aksiyonSatiri}>
         <TouchableOpacity style={[styles.aksiyonButon, styles.araButon]} onPress={aramaYap}>
           <Ionicons name="call" size={20} color="#FFF" />
@@ -133,14 +136,8 @@ export default function DetayScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F6F8',
-  },
-  icerik: {
-    padding: 16,
-    paddingBottom: 32,
-  },
+  container: { flex: 1, backgroundColor: '#F5F6F8' },
+  icerik: { padding: 16, paddingBottom: 32 },
   profilKarti: {
     alignItems: 'center',
     backgroundColor: '#FFF',
@@ -150,22 +147,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#EAEAEA',
   },
-  buyukAvatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 12,
-  },
-  adSoyad: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#111',
-  },
-  yasBilgisi: {
-    fontSize: 15,
-    color: '#666',
-    marginTop: 4,
-  },
+  buyukAvatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 12 },
+  adSoyad: { fontSize: 22, fontWeight: 'bold', color: '#111' },
+  yasBilgisi: { fontSize: 15, color: '#666', marginTop: 4 },
   bilgiKarti: {
     backgroundColor: '#FFF',
     borderRadius: 14,
@@ -175,29 +159,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#EAEAEA',
   },
-  bilgiSatiri: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  sonSatir: {
-    borderBottomWidth: 0,
-  },
-  etiket: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#888',
-    marginBottom: 4,
-  },
-  deger: {
-    fontSize: 15,
-    color: '#222',
-  },
-  aksiyonSatiri: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
+  bilgiSatiri: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  sonSatir: { borderBottomWidth: 0 },
+  etiket: { fontSize: 12, fontWeight: '600', color: '#888', marginBottom: 4 },
+  deger: { fontSize: 15, color: '#222' },
+  aksiyonSatiri: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
   aksiyonButon: {
     flex: 1,
     flexDirection: 'row',
@@ -207,21 +173,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginHorizontal: 4,
   },
-  araButon: {
-    backgroundColor: '#34C759',
-  },
-  mailButon: {
-    backgroundColor: '#007AFF',
-  },
-  paylasButon: {
-    backgroundColor: '#5856D6',
-  },
-  aksiyonButonMetin: {
-    color: '#FFF',
-    fontWeight: '600',
-    fontSize: 14,
-    marginLeft: 6,
-  },
+  araButon: { backgroundColor: '#34C759' },
+  mailButon: { backgroundColor: '#007AFF' },
+  paylasButon: { backgroundColor: '#5856D6' },
+  aksiyonButonMetin: { color: '#FFF', fontWeight: '600', fontSize: 14, marginLeft: 6 },
   kaydetButon: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -230,13 +185,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
   },
-  kaydedildiButon: {
-    backgroundColor: '#FF3B30',
-  },
-  kaydetButonMetin: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginLeft: 8,
-  },
+  kaydedildiButon: { backgroundColor: '#FF3B30' },
+  kaydetButonMetin: { color: '#FFF', fontWeight: 'bold', fontSize: 16, marginLeft: 8 },
 });
