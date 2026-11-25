@@ -1,127 +1,41 @@
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import { kayitliKisileriGetir } from '../utils/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function KaydedilenlerScreen({ navigation }) {
-  const [kayitliKisiler, setKayitliKisiler] = useState([]);
+const KAYITLI_KISILER_ANAHTARI = '@bsm447_kayitli_kisiler';
 
-  // Sekmeye her odaklanıldığında güncel kayıtları AsyncStorage'dan çek
-  useFocusEffect(
-    useCallback(() => {
-      const verileriYukle = async () => {
-        const veriler = await kayitliKisileriGetir();
-        setKayitliKisiler(veriler);
-      };
-      verileriYukle();
-    }, [])
-  );
-
-  const kisiSatiriCiz = ({ item }) => (
-    <TouchableOpacity
-      style={styles.kart}
-      onPress={() => navigation.navigate('Detay', { kisi: item })}
-    >
-      <Image source={{ uri: item.picture.thumbnail }} style={styles.avatar} />
-      <View style={styles.bilgiAlani}>
-        <Text style={styles.adSoyad}>
-          {item.name.first} {item.name.last}
-        </Text>
-        <Text style={styles.sehir}>{item.location.city}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color="#999" />
-    </TouchableOpacity>
-  );
-
-  if (kayitliKisiler.length === 0) {
-    return (
-      <View style={styles.bosMerkez}>
-        <Ionicons name="bookmark-outline" size={56} color="#B0B5BD" />
-        <Text style={styles.bosBaslik}>Henüz kaydedilmiş kişi yok</Text>
-        <Text style={styles.bosAltMetin}>
-          Kişiler sekmesinden bir kayda girip "Kaydet" düğmesine basabilirsiniz.
-        </Text>
-      </View>
-    );
+// Kayıtlı tüm kişileri getirir
+export const kayitliKisileriGetir = async () => {
+  try {
+    const jsonDeger = await AsyncStorage.getItem(KAYITLI_KISILER_ANAHTARI);
+    return jsonDeger != null ? JSON.parse(jsonDeger) : [];
+  } catch (hata) {
+    console.error('Kayıtlar okunurken hata:', hata);
+    return [];
   }
+};
 
-  return (
-    <View style={styles.container}>
-      <FlatList
-        data={kayitliKisiler}
-        keyExtractor={(item) => item.login.uuid}
-        renderItem={kisiSatiriCiz}
-        contentContainerStyle={styles.listeIcerik}
-      />
-    </View>
-  );
-}
+// Kişi zaten kayıtlı mı kontrol eder (login.uuid üzerinden)
+export const kisiKayitliMi = async (uuid) => {
+  const liste = await kayitliKisileriGetir();
+  return liste.some((item) => item.login.uuid === uuid);
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F6F8',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
-  listeIcerik: {
-    paddingBottom: 20,
-  },
-  kart: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#EAEAEA',
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
-  },
-  bilgiAlani: {
-    flex: 1,
-  },
-  adSoyad: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111',
-  },
-  sehir: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 2,
-  },
-  bosMerkez: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    backgroundColor: '#F5F6F8',
-  },
-  bosBaslik: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#444',
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  bosAltMetin: {
-    fontSize: 14,
-    color: '#777',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-});
+// Kişiyi kaydeder veya zaten kayıtlıysa listeden çıkarır
+export const kisiKaydetVeyaCikar = async (kisi) => {
+  try {
+    const mevcutListe = await kayitliKisileriGetir();
+    const varMi = mevcutListe.some((item) => item.login.uuid === kisi.login.uuid);
+
+    let yeniListe;
+    if (varMi) {
+      yeniListe = mevcutListe.filter((item) => item.login.uuid !== kisi.login.uuid);
+    } else {
+      yeniListe = [...mevcutListe, kisi];
+    }
+
+    await AsyncStorage.setItem(KAYITLI_KISILER_ANAHTARI, JSON.stringify(yeniListe));
+    return !varMi; // Yeni kayıt durumunu (true: kaydedildi, false: çıkarıldı) döner
+  } catch (hata) {
+    console.error('Kayıt güncellenirken hata:', hata);
+    throw hata; // Çağıran ekran hatayı yakalayıp kullanıcıya bildirir
+  }
+};

@@ -30,7 +30,9 @@ export default function DetayScreen({ route }) {
   const tamAdres = `${kisi.location.street.name} No: ${kisi.location.street.number}, ${kisi.location.city} / ${kisi.location.state}, ${kisi.location.country}`;
 
   const aramaYap = () => {
-    Linking.openURL(`tel:${kisi.phone}`).catch(() =>
+    // Boşluk, parantez ve tire gibi karakterleri temizle; yalnızca rakam ve + kalsın
+    const temizNumara = kisi.phone.replace(/[^\d+]/g, '');
+    Linking.openURL(`tel:${temizNumara}`).catch(() =>
       Alert.alert('Hata', 'Arama uygulaması açılamadı.')
     );
   };
@@ -60,8 +62,13 @@ export default function DetayScreen({ route }) {
   };
 
   const kaydetDurumuDegistir = async () => {
-    const yeniDurum = await kisiKaydetVeyaCikar(kisi);
-    setKaydedildi(yeniDurum);
+    try {
+      const yeniDurum = await kisiKaydetVeyaCikar(kisi);
+      setKaydedildi(yeniDurum);
+    } catch (hata) {
+      // Kayıt başarısız olursa düğmenin durumu değişmez
+      Alert.alert('Hata', 'Kayıt işlemi tamamlanamadı. Lütfen tekrar deneyin.');
+    }
   };
 
   return (

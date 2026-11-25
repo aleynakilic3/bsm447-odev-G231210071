@@ -9,13 +9,13 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#C88A36"
     },
     "android": {
       "package": "com.aleynakilic.kisirehberi",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#007AFF"
+        "backgroundColor": "#C88A36"
       }
     },
     "extra": {

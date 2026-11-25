@@ -16,6 +16,7 @@ const YAS_ARALIKLARI = ['Tümü', '18-30', '31-50', '51+'];
 export default function ListeScreen({ navigation }) {
   const [kisiler, setKisiler] = useState([]);
   const [yukleniyor, setYukleniyor] = useState(true);
+  const [hata, setHata] = useState(false);
   const [aramaMetni, setAramaMetni] = useState('');
   const [seciliYas, setSeciliYas] = useState('Tümü');
 
@@ -26,11 +27,16 @@ export default function ListeScreen({ navigation }) {
   const verileriGetir = async () => {
     try {
       setYukleniyor(true);
+      setHata(false);
       const cevap = await fetch(API_URL);
+      if (!cevap.ok) {
+        throw new Error(`Sunucu hatası: ${cevap.status}`);
+      }
       const json = await cevap.json();
       setKisiler(json.results || []);
-    } catch (hata) {
-      console.error('Veri cekme hatasi:', hata);
+    } catch (e) {
+      console.error('Veri cekme hatasi:', e);
+      setHata(true);
     } finally {
       setYukleniyor(false);
     }
@@ -79,6 +85,20 @@ export default function ListeScreen({ navigation }) {
     );
   }
 
+  if (hata) {
+    return (
+      <View style={styles.merkez}>
+        <Text style={styles.hataMetin}>Bağlantı yok</Text>
+        <Text style={styles.hataAciklama}>
+          Kişiler yüklenemedi. İnternet bağlantınızı kontrol edin.
+        </Text>
+        <TouchableOpacity style={styles.tekrarButon} onPress={verileriGetir}>
+          <Text style={styles.tekrarButonMetin}>Tekrar dene</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Arama Kutusu */}
@@ -113,6 +133,10 @@ export default function ListeScreen({ navigation }) {
         keyExtractor={(item) => item.login.uuid}
         renderItem={kisiSatiriRender}
         contentContainerStyle={styles.listeIcerik}
+        keyboardShouldPersistTaps="handled"
+        ListEmptyComponent={
+          <Text style={styles.sonucYok}>Sonuç bulunamadı</Text>
+        }
       />
     </View>
   );
@@ -133,6 +157,36 @@ const styles = StyleSheet.create({
   yukleniyorMetin: {
     marginTop: 8,
     color: '#555',
+  },
+  hataMetin: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#444',
+    marginBottom: 6,
+  },
+  hataAciklama: {
+    fontSize: 14,
+    color: '#777',
+    textAlign: 'center',
+    paddingHorizontal: 32,
+    marginBottom: 16,
+  },
+  tekrarButon: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+  },
+  tekrarButonMetin: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  sonucYok: {
+    textAlign: 'center',
+    color: '#777',
+    fontSize: 15,
+    marginTop: 24,
   },
   aramaKutusu: {
     backgroundColor: '#FFF',
